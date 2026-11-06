@@ -8,7 +8,7 @@ ERC-8415 is the number assigned to this proposal in #2006; it was applied to the
 
 ## What changed relative to #2006
 
-Nothing. `ERCS/erc-8415.md` is byte-identical to the head of #2006 (`12e68aee54c6f94f6910d4db42f1d5677b506de1`), including the original `author` line. This PR is opened from the author's new account, `GiraffeJP`, because the account named in that line can no longer be used.
+The proposal text is identical to the head of #2006 (`12e68aee54c6f94f6910d4db42f1d5677b506de1`). The only change is the `author` line, now `Michael Yip (@GiraffeJP)`. It is the same author, Michael Yip; `GiraffeJP` is the author's new account, replacing the closed `GiraffeTechnology`.
 
 Discussion: https://ethereum-magicians.org/t/erc-8415-asynchronous-register-projection-for-nfts/29634
 
