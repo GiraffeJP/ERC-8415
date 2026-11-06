@@ -159,7 +159,7 @@ ERC-8415/
 └── README.md
 ```
 
-The local draft is kept in two forms: `ERCS/` follows the `ethereum/ERCs` conventions and `EIPS/` follows `ethereum/EIPs`, including sibling-proposal links. Keep the two local forms aligned when editing the draft. Both forms were synchronised with the head of upstream PR #2006 (`12e68ae`), including the cross-token uniqueness scope and the same-transaction consumer guidance sections. The only intended differences are the author handle, now `@GiraffeJP` because the original account was closed, and, in `EIPS/`, the reference implementation and test-suite links, which point into this repository. They are not synchronised automatically; later upstream revisions must be applied by hand.
+The local draft is kept in two places, `ERCS/` and `EIPS/`. Both are byte-identical copies of the head of upstream PR #2006 (`12e68ae`), which is the authoritative text. They are not synchronised automatically; later upstream revisions must be copied in by hand. The resubmission copy under `submission/` differs only in the author handle.
 
 ### The `watchtower/` directory
 
