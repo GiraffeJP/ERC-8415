@@ -2,3 +2,5 @@ node_modules/
 artifacts/
 cache/
 dist/
+watchtower/lib/
+watchtower/out/
