@@ -159,7 +159,7 @@ ERC-8415/
 └── README.md
 ```
 
-The local draft is kept in two forms: `ERCS/` follows the `ethereum/ERCs` conventions and `EIPS/` follows `ethereum/EIPs`, including sibling-proposal links. Keep the two local forms aligned when editing the draft. They are not automatically synchronised with upstream PR #2006; in particular, the upstream baseline linked above includes a same-transaction consumer guidance section that is not yet in these local copies. Use the upstream PR to follow proposal revisions.
+The local draft is kept in two places, `ERCS/` and `EIPS/`. Both are byte-identical copies of the head of upstream PR #2006 (`12e68ae`), which is the authoritative text. They are not synchronised automatically; later upstream revisions must be copied in by hand. The resubmission copy under `submission/` differs only in the author handle.
 
 ### The `watchtower/` directory
 

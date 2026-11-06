@@ -3,7 +3,7 @@ eip: 8415
 title: Asynchronous Register Projection for NFTs
 description: Projects an asynchronous off-chain register onto ERC-721 so any past instant resolves to one confirmed holder
 author: Michael Yip (@GiraffeTechnology)
-discussions-to: https://ethereum-magicians.org/t/working-draft-asynchronous-register-projection-for-nfts/29634
+discussions-to: https://ethereum-magicians.org/t/erc-8415-asynchronous-register-projection-for-nfts/29634
 status: Draft
 type: Standards Track
 category: ERC
@@ -15,7 +15,7 @@ requires: 165, 721
 
 An off-chain register that records who holds an asset updates asynchronously, and no on-chain design removes that lag. Each change the register makes does, however, carry a unique identity: the instant it takes effect, and a commitment to its content at that instant.
 
-This ERC turns that identity into an ordered projection of the register onto an [ERC-721](./erc-721.md) token. Entries are append-only, their effective times strictly increase, and their commitments are unique within a token, so **every past instant resolves to exactly one confirmed holder** while the chain is still behind the register. Whether an instant's answer can still change is decidable from the same invariants.
+This ERC turns that identity into an ordered projection of the register onto an [ERC-721](./eip-721.md) token. Entries are append-only, their effective times strictly increase, and their commitments are unique within a token, so **every past instant resolves to exactly one confirmed holder** while the chain is still behind the register. Whether an instant's answer can still change is decidable from the same invariants.
 
 The token keeps trading throughout. `ownerOf` is the tradeable position; the projection is the confirmed record; the two are deliberately kept apart. A change enters the projection only on proof that the corresponding record exists in a finalized state of the remote register, and proof submitters are untrusted. The register's contents stay off chain; only commitments and references reach the chain.
 
@@ -72,7 +72,7 @@ These four rules are what make an instant resolve uniquely. An implementation th
 1. The first entry MUST have version `1` and a zero `previousCommitment`, and MUST emit `RegisterInitialized`.
 2. Each admitted change MUST append version `n + 1`, link the prior commitment, set the prior entry's `supersededAt` to the new entry's `effectiveAt`, leave the new entry's `supersededAt` zero, and emit `RegisterSuperseded`. The prior entry's interval is closed by the register, not by the moment the chain learned of it.
 3. `effectiveAt` MUST be **strictly greater** than that of the preceding entry. Equal effective times are forbidden, because an instant shared by two entries would have two answers. Because strict monotonicity also means no later entry can undercut an admitted effective time, an implementation SHOULD reject an `effectiveAt` further ahead of the current block timestamp than its profile allows; an unbounded one ends the projection for that token permanently.
-4. A record commitment MUST be unique within a token's own chain of entries. A repeated commitment is forbidden, because two entries that cannot be told apart cannot be resolved.
+4. A record commitment MUST be unique within a token's own chain of entries. A repeated commitment is forbidden, because two entries that cannot be told apart cannot be resolved. Uniqueness of registry references or commitments across tokens is not required by this ERC; see **Why cross-token uniqueness is out of scope** under Rationale.
 
 Entries MUST NOT be overwritten, deleted, reordered or skipped. Queries for a nonexistent token or version MUST revert.
 
@@ -86,9 +86,11 @@ An instant is therefore final if and only if it is at or after the first entry's
 
 An instant at or after the latest entry's `effectiveAt` still resolves, but provisionally: a later admission may carry an earlier effective time and supersede the answer. A consumer that requires a settled answer MUST check `isFinalAsOf`, because `entryAsOf` does not distinguish the two cases. An open gap indicates that such an admission is expected, but finality does not depend on whether a gap is open, and closing one does not by itself make any instant final.
 
+The association between the token and an underlying off-chain right is an application assumption, not a property verified by this ERC. `isFinalAsOf(tokenId, t) == true` means that subsequent conforming admissions cannot change the projection's confirmed-holder answer for instant `t`. It does not establish agreement with the ERC-721 ownership record or verify legal title.
+
 ### Register interface
 
-These interfaces are implemented by the [ERC-721](./erc-721.md) contract itself. They identify a token by `tokenId` alone and carry no token contract address. Who may open a gap is a separate question from who owns the token, and is answered by `isSettlementAuthority` rather than by ERC-721 authorization; see **Settlement authority** below.
+These interfaces are implemented by the [ERC-721](./eip-721.md) contract itself. They identify a token by `tokenId` alone and carry no token contract address. Who may open a gap is a separate question from who owns the token, and is answered by `isSettlementAuthority` rather than by ERC-721 authorization; see **Settlement authority** below.
 
 ```solidity
 // SPDX-License-Identifier: CC0-1.0
@@ -148,7 +150,7 @@ interface IRegisterProjection is IERC165 {
 }
 ```
 
-The [ERC-165](./erc-165.md) identifier for `IRegisterProjection` is `0x6309e170`, computed by XOR of its function selectors, excluding the inherited `supportsInterface(bytes4)` selector. It can be verified in Solidity as `type(IRegisterProjection).interfaceId`.
+The [ERC-165](./eip-165.md) identifier for `IRegisterProjection` is `0x6309e170`, computed by XOR of its function selectors, excluding the inherited `supportsInterface(bytes4)` selector. It can be verified in Solidity as `type(IRegisterProjection).interfaceId`.
 
 `registerId` MUST be a nonzero identifier of the remote register being projected and MUST NOT change. A party with no relationship to the registrar otherwise cannot tell what a projection is a projection of, which is the position every third-party venue is in. Resolving that identifier to a description of the register and its profile is left to the profile, since a document reference cannot be verified on chain.
 
@@ -295,19 +297,23 @@ This does not replace an oracle, and the distinction is worth being exact about.
 
 This ERC therefore constrains verification and leaves attestation to the profile. An attesting party may be a light client, a quorum of signers, a registrar's own key, or a fixed procedure run over the register, and the profile names which; what is required is that checking a commitment be deterministic, not that arriving at the value was.
 
+### Why cross-token uniqueness is out of scope
+
+Commitment uniqueness is enforced per token; this ERC does not require a global mapping of registry references or commitments across tokens. Enforcing global uniqueness on chain would require cross-token state and impose a mapping constraint that this ERC intentionally leaves to applications. The same underlying off-chain asset may therefore be represented by more than one token; applications that assume one registry reference per live asset, such as escrow or financing instruments, MUST enforce that invariant themselves. Downstream indexers MAY detect and surface such collisions rather than relying on the protocol to reject them. This boundary does not relax the proof-binding or replay-protection requirements of the settlement interface: each admission must still satisfy the chain, contract, token and settlement bindings specified under **Settlement and proof-verified admission**.
+
 ### Prior art
 
-[ERC-5805](./erc-5805.md), with the contract clock of [ERC-6372](./erc-6372.md), is the closest work on the projection side. It checkpoints voting weight and answers for a past timepoint, and it requires that answer to hold still: for any timepoint below the current clock the value SHOULD be constant, and past checkpoints SHOULD be immutable. It can require that because the chain writes those checkpoints and is itself the source of truth, so no later write can land behind an earlier one. This ERC projects a register the chain does not control, whose entries arrive after the instants they take effect at, so a past instant's answer is provisional until a later entry closes it. Finality is therefore decidable and worth exposing here, and vacuous there. ERC-6372 standardizes how a contract declares its own clock; the instants here are the register's, stated on the same scale so that the two can be compared.
+[ERC-5805](./eip-5805.md), with the contract clock of [ERC-6372](./eip-6372.md), is the closest work on the projection side. It checkpoints voting weight and answers for a past timepoint, and it requires that answer to hold still: for any timepoint below the current clock the value SHOULD be constant, and past checkpoints SHOULD be immutable. It can require that because the chain writes those checkpoints and is itself the source of truth, so no later write can land behind an earlier one. This ERC projects a register the chain does not control, whose entries arrive after the instants they take effect at, so a past instant's answer is provisional until a later entry closes it. Finality is therefore decidable and worth exposing here, and vacuous there. ERC-6372 standardizes how a contract declares its own clock; the instants here are the register's, stated on the same scale so that the two can be compared.
 
-[ERC-7965](./erc-7965.md) is the closest work on the proof side. It standardizes proof-based verification of source-chain messages inside [ERC-7786](./erc-7786.md) gateways. Its broadcast semantics require one proof to serve many recipients, so it deliberately does not bind a proof to a destination field set, and it does not constrain the relationship between verification and execution. It proves a message; it does not build an ordered register whose past instants resolve. [ERC-5164](./erc-5164.md) and [ERC-6358](./erc-6358.md) likewise address execution and multi-chain token state rather than register history.
+[ERC-7965](./eip-7965.md) is the closest work on the proof side. It standardizes proof-based verification of source-chain messages inside [ERC-7786](./eip-7786.md) gateways. Its broadcast semantics require one proof to serve many recipients, so it deliberately does not bind a proof to a destination field set, and it does not constrain the relationship between verification and execution. It proves a message; it does not build an ordered register whose past instants resolve. [ERC-5164](./eip-5164.md) and [ERC-6358](./eip-6358.md) likewise address execution and multi-chain token state rather than register history.
 
 This is not a bridge. ICS-721 and similar designs escrow, burn or mint a representation so that a token moves between chains. Here the token never leaves its chain and nothing is minted; a proof admits a record.
 
-[ERC-6997](./erc-6997.md) adds a validation stage to transfers, and holds cleared by a notary are long-established. All of them gate a transfer on an authorized party's word, and none maintains a time-resolvable record of who was confirmed when.
+[ERC-6997](./eip-6997.md) adds a validation stage to transfers, and holds cleared by a notary are long-established. All of them gate a transfer on an authorized party's word, and none maintains a time-resolvable record of who was confirmed when.
 
-[ERC-7765](./erc-7765.md) and [ERC-5496](./erc-5496.md) express whether a right may be exercised and allow rights to be separated from ownership. Neither ties the availability of an exercise to the state of an external register, nor lets a contract ask who was confirmed at a past instant and whether that answer is settled. [ERC-7943](./erc-7943.md) supplies transfer eligibility and freezing controls that compose with this ERC; [ERC-8325](./erc-8325.md) supplies asset anchoring that an implementation MAY use.
+[ERC-7765](./eip-7765.md) and [ERC-5496](./eip-5496.md) express whether a right may be exercised and allow rights to be separated from ownership. Neither ties the availability of an exercise to the state of an external register, nor lets a contract ask who was confirmed at a past instant and whether that answer is settled. [ERC-7943](./eip-7943.md) supplies transfer eligibility and freezing controls that compose with this ERC; [ERC-8325](./eip-8325.md) supplies asset anchoring that an implementation MAY use.
 
-Standards for tokenized real-world assets address eligibility rather than history. [ERC-3643](./erc-3643.md) verifies holders against an on-chain identity registry and keeps no time-indexed record of who held what when. [ERC-6065](./erc-6065.md) commits to an operating agreement by hash and states plainly that it needs a trusted party to keep the token mirroring its off-chain counterpart, which is the arrangement this ERC exists to replace with a checkable one.
+Standards for tokenized real-world assets address eligibility rather than history. [ERC-3643](./eip-3643.md) verifies holders against an on-chain identity registry and keeps no time-indexed record of who held what when. [ERC-6065](./eip-6065.md) commits to an operating agreement by hash and states plainly that it needs a trusted party to keep the token mirroring its off-chain counterpart, which is the arrangement this ERC exists to replace with a checkable one.
 
 Off-chain credential and attestation systems can express issuance and revocation, but do not make a past instant resolve to one holder under an on-chain invariant.
 
@@ -342,7 +348,7 @@ Conforming implementations MUST satisfy at least the following.
 
 ## Reference Implementation
 
-A CC0 Solidity [reference implementation](https://github.com/GiraffeTechnology/ERCs/blob/1a360c633feb3dfd8552b20167674782647063de/reference/RegisterProjectionReference.sol) and a self-contained [local-EVM test suite](https://github.com/GiraffeTechnology/ERCs/blob/1a360c633feb3dfd8552b20167674782647063de/test/protocol.cjs) accompany this proposal. The suite needs no wallet, RPC endpoint, testnet asset or external signer.
+A CC0 Solidity reference implementation and a self-contained local-EVM test suite are maintained separately. The suite needs no wallet, RPC endpoint, testnet asset or external signer.
 
 ## Security Considerations
 
@@ -363,6 +369,10 @@ The same privilege withholds as well as produces. Beginning a settlement while o
 Strict monotonicity also cuts the other way at the far end. An admitted effective time far in the future permanently ends the projection for that token, because no later entry can exceed it. Nothing here bounds how far ahead of the present an effective time may be, so a profile that cannot rule that out inherits an unrecoverable state.
 
 Entries, commitments, participants, instants and proof material are public. Commitments may leak information through low-entropy inputs or correlation. Profiles SHOULD use domain-separated commitments, avoid confidential plaintext, and publish only proof material necessary for verification. Deleting off-chain data does not delete commitments, logs, calldata or historical chain state.
+
+### Non-normative guidance: time-of-check to time-of-use
+
+`holderAsOf`, `isFinalAsOf` and `openGapOf` are point-in-time reads; projection state may change between an off-chain read and the transaction that acts on it. Applications should read and validate the relevant projection state on-chain within the same transaction as the action that depends on it. Off-chain reads may inform the user interface, but the executing contract should revalidate its required conditions and revert if they are no longer satisfied. This addresses the cross-transaction read-then-act window; separate transactions in the same block do not provide that guarantee. This guidance does not change the interface.
 
 ## Copyright
 
