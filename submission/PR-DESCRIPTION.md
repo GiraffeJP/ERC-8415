@@ -1,6 +1,12 @@
 # ERC-8415: Asynchronous Register Projection for NFTs
 
-This PR resubmits ERC-8415 from a new account. The original PR, ethereum/ERCs#2006, was opened from @GiraffeTechnology, an account that has since been permanently closed. Same author (Michael Yip), same proposal.
+This PR resubmits ERC-8415 under its assigned number from a new account. The original PR, ethereum/ERCs#2006, was opened from @GiraffeTechnology, an account that has since been permanently closed. Same author (Michael Yip), same proposal.
+
+## Why this PR keeps the number 8415
+
+ERC-8415 is the number assigned to this proposal in #2006; it was applied to the file in commit `c9bf1a5` ("Assign ERC-8415 and update discussions-to link"). This PR replaces #2006 and is not a new proposal, so it keeps that number. The Ethereum Magicians thread (`discussions-to`), the published interface identifiers and existing references to the proposal all use 8415. Changing the number would split one proposal's history across two numbers. If the editors still prefer a fresh number, I will rename the file and update `eip:` on request.
+
+## What changed relative to #2006
 
 The proposal text is identical to the head of #2006 (`12e68aee54c6f94f6910d4db42f1d5677b506de1`). The only change is the `author` handle, now `@GiraffeJP`.
 
