@@ -8,6 +8,8 @@ const ALLOWED = new Set([
   "COMPARISON.md",
   "EIPS/eip-8415.md",
   "ERCS/erc-8415-asynchronous-register-projection.md",
+  "submission/ERCS/erc-8415.md",
+  "submission/PR-DESCRIPTION.md",
   "LICENSE",
   "RATIONALE.md",
   "README.md",
